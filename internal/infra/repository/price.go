@@ -68,6 +68,6 @@ func initPrices() map[repoKey]domain.Price {
 		{City: domain.CityPineville, VisitorType: domain.VisitorTypeBusiness, FractionType: domain.FractionTypeGreenWaste}:        domain.Price{Value: 0.12},
 		{City: domain.CityPineville, VisitorType: domain.VisitorTypeBusiness, FractionType: domain.FractionTypeConstructionWaste}: domain.Price{Value: 0.13},
 		{City: domain.CityOakCity, VisitorType: domain.VisitorTypeBusiness, FractionType: domain.FractionTypeGreenWaste}:          domain.Price{Value: 0.08},
-		{City: domain.CityOakCity, VisitorType: domain.VisitorTypeBusiness, FractionType: domain.FractionTypeConstructionWaste}:   domain.Price{Value: 0.19},
+		{City: domain.CityOakCity, VisitorType: domain.VisitorTypeBusiness, FractionType: domain.FractionTypeConstructionWaste}:   domain.Price{Value: 0.21},
 	}
 }
