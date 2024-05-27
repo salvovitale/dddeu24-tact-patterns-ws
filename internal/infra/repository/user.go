@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/salvovitale/dddeu24-tact-patterns-ws/internal/application"
 	"github.com/salvovitale/dddeu24-tact-patterns-ws/internal/domain"
 )
 
@@ -33,14 +34,9 @@ type UserInRepo struct {
 	CardID  string `json:"card_id"`
 }
 
-type UserDto struct {
-	ID   string
-	City domain.City
-}
-
 type UserRepository struct{}
 
-func (r *UserRepository) Get(id string) (*UserDto, error) {
+func (r *UserRepository) Get(id string) (*application.ExtUser, error) {
 	client := &http.Client{
 		Timeout: time.Duration(5) * time.Second,
 	}
@@ -70,7 +66,7 @@ func (r *UserRepository) Get(id string) (*UserDto, error) {
 		return nil, fmt.Errorf("error decoding response body: %v", err)
 	}
 
-	var user *UserDto
+	var user *application.ExtUser
 	for _, u := range users {
 		if u.ID == id {
 			slog.Info("user found", slog.Any("user", u))
@@ -78,9 +74,14 @@ func (r *UserRepository) Get(id string) (*UserDto, error) {
 			if err != nil {
 				return nil, err
 			}
-			user = &UserDto{
-				ID:   u.ID,
-				City: city,
+			visitorType, err := domain.ParseVisitorType(u.Type)
+			if err != nil {
+				return nil, err
+			}
+			user = &application.ExtUser{
+				ID:          u.ID,
+				City:        city,
+				VisitorType: visitorType,
 			}
 			break
 		}

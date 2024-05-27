@@ -6,26 +6,21 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/salvovitale/dddeu24-tact-patterns-ws/internal/application"
 	"github.com/salvovitale/dddeu24-tact-patterns-ws/internal/domain"
-	infra_repository "github.com/salvovitale/dddeu24-tact-patterns-ws/internal/infra/repository"
 	slogchi "github.com/samber/slog-chi"
 )
 
-type extUserService interface {
-	Get(id string) (*infra_repository.UserDto, error)
-}
 type Handler struct {
-	*chi.Mux       //embedded structure
-	priceSvc       domain.PriceService
-	extUserService extUserService
+	*chi.Mux //embedded structure
+	priceUC  application.PriceUseCase
 }
 
-func NewHandler(logger *slog.Logger, priceSvc domain.PriceService, extUserService extUserService) *Handler {
+func NewHandler(logger *slog.Logger, priceUC application.PriceUseCase) *Handler {
 
 	h := &Handler{
-		Mux:            chi.NewRouter(),
-		priceSvc:       priceSvc,
-		extUserService: extUserService,
+		Mux:     chi.NewRouter(),
+		priceUC: priceUC,
 	}
 
 	// add logger middleware
@@ -55,7 +50,7 @@ func (h *Handler) startScenario() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		jsonData := map[string]string{}
-		err := h.priceSvc.ClearScenario()
+		err := h.priceUC.ClearScenario()
 		if err != nil {
 			slog.Error("error clearing scenario", slog.Any("error", err))
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -96,24 +91,10 @@ func (h *Handler) calculatePrice() http.HandlerFunc {
 			})
 		}
 
-		user, err := h.extUserService.Get(req.PersonID)
+		price, err := h.priceUC.CalculatePrice(fractions, req.PersonID, req.Date)
 		if err != nil {
-			slog.Error("error getting user", slog.Any("error", err))
+			slog.Error("error calculating price", slog.Any("error", err))
 			http.Error(w, err.Error(), http.StatusInternalServerError)
-		}
-
-		visit, err := domain.NewVisit(user.ID, req.Date, fractions, user.City)
-		if err != nil {
-			slog.Error("error creating visit", slog.Any("error", err))
-			http.Error(w, err.Error(), http.StatusBadRequest)
-		}
-
-		slog.Info("visit created", slog.Any("visit", visit))
-
-		price, err := h.priceSvc.CalculatePrice(visit)
-		if err != nil {
-			slog.Error("error calculate price", slog.Any("error", err))
-			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 

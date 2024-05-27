@@ -8,8 +8,8 @@ import (
 type City string
 
 const (
-	Pineville City = "Pineville"
-	OakCity   City = "Oak City"
+	CityPineville City = "Pineville"
+	CityOakCity   City = "Oak City"
 )
 
 func ParseCity(s string) (City, error) {
@@ -17,32 +17,19 @@ func ParseCity(s string) (City, error) {
 	replaced := strings.Replace(trimmedLower, " ", "_", -1)
 	switch replaced {
 	case "pineville":
-		return Pineville, nil
+		return CityPineville, nil
 	case "oak_city":
-		return OakCity, nil
+		return CityOakCity, nil
 	default:
 		return "", fmt.Errorf("unknown city: %s", s)
 	}
 }
 
-type FractionPricePerKg float64
-
-const (
-	GreenWastePinevillePrice        FractionPricePerKg = 0.1
-	ConstructionPinevilleWastePrice FractionPricePerKg = 0.15
-	GreenWasteOakCityPrice          FractionPricePerKg = 0.08
-	ConstructionOakCityWastePrice   FractionPricePerKg = 0.19
-)
-
-func (f FractionPricePerKg) Float64() float64 {
-	return float64(f)
-}
-
 type FractionType string
 
 const (
-	GreenWaste        FractionType = "green_waste"
-	ConstructionWaste FractionType = "construction_waste"
+	FractionTypeGreenWaste        FractionType = "green_waste"
+	FractionTypeConstructionWaste FractionType = "construction_waste"
 )
 
 func ParseFractionType(s string) (FractionType, error) {
@@ -51,43 +38,17 @@ func ParseFractionType(s string) (FractionType, error) {
 
 	switch replaced {
 	case "green_waste":
-		return GreenWaste, nil
+		return FractionTypeGreenWaste, nil
 	case "construction_waste":
-		return ConstructionWaste, nil
+		return FractionTypeConstructionWaste, nil
 	default:
 		return "", fmt.Errorf("unknown fraction type: %s", s)
-	}
-}
-
-func (f FractionType) PricePerKg(city City) (FractionPricePerKg, error) {
-	switch f {
-	case GreenWaste:
-		switch city {
-		case Pineville:
-			return GreenWastePinevillePrice, nil
-		case OakCity:
-			return GreenWasteOakCityPrice, nil
-		default:
-			return 0, fmt.Errorf("unknown city: %s", city)
-		}
-	case ConstructionWaste:
-		switch city {
-		case Pineville:
-			return ConstructionPinevilleWastePrice, nil
-		case OakCity:
-			return ConstructionOakCityWastePrice, nil
-		default:
-			return 0, fmt.Errorf("unknown city: %s", city)
-		}
-	default:
-		return 0, fmt.Errorf("unknown fraction type: %s", f)
 	}
 }
 
 type Fraction struct {
 	Type FractionType
 	Kg   FractionWeight
-	City City
 }
 
 type FractionWeight float64
@@ -101,4 +62,19 @@ func ParseWeight(f float64) (FractionWeight, error) {
 		return 0, fmt.Errorf("weight must be positive")
 	}
 	return FractionWeight(f), nil
+}
+
+type FractionPrice struct {
+	FractionType FractionType
+	City         City
+	PricePerKg   Price
+	VisitorType  VisitorType
+}
+
+var (
+	ErrFractionPriceNotFound = fmt.Errorf("fraction price not found")
+)
+
+type FractionPriceRepository interface {
+	Get(city City, visitorType VisitorType, fractionType FractionType) (*FractionPrice, error)
 }

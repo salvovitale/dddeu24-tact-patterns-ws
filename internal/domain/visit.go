@@ -7,11 +7,9 @@ const dateLayout = "2006-01-02"
 type Visit struct {
 	Fractions []Fraction
 	Date      time.Time
-	VisitorID string
-	City      City
 }
 
-func NewVisit(visitorID string, date string, fractions []Fraction, city City) (Visit, error) {
+func NewVisit(date string, fractions []Fraction) (Visit, error) {
 	t, err := time.Parse(dateLayout, date)
 	if err != nil {
 		return Visit{}, err
@@ -19,7 +17,5 @@ func NewVisit(visitorID string, date string, fractions []Fraction, city City) (V
 	return Visit{
 		Fractions: fractions,
 		Date:      t,
-		VisitorID: visitorID,
-		City:      city,
 	}, nil
 }
