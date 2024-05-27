@@ -1,0 +1,14 @@
+# @server = https://humble-guacamole-49g746r44qhqww9-5000.app.github.dev
+
+@server = http://localhost:5000
+### Root
+GET {{server}}/
+
+### Start Scenarion
+POST {{server}}/startScenario
+
+### CalculatePrice
+POST {{server}}/calculatePrice
+
+
+

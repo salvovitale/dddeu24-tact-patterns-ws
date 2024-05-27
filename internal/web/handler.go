@@ -20,6 +20,8 @@ func NewHandler(logger *slog.Logger) *Handler {
 
 	// root path
 	h.Get("/", h.statusOK())
+	h.Post("/startScenario", h.startScenario())
+	h.Post("/calculatePrice", h.calculatePrice())
 
 	// sub paths
 	// h.Route("/threads", func(r chi.Router) {
@@ -37,5 +39,33 @@ func (h *Handler) statusOK() http.HandlerFunc {
 		w.Header().Set("Content-Type", "application/json")
 		jsonData := map[string]string{"status": "OK"}
 		json.NewEncoder(w).Encode(jsonData)
+	}
+}
+
+func (h *Handler) startScenario() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		jsonData := map[string]string{}
+		json.NewEncoder(w).Encode(jsonData)
+	}
+}
+
+func (h *Handler) calculatePrice() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+
+		type response struct {
+			PriceAmount   float64 `json:"price_amount"`
+			PersonID      string  `json:"person_id"`
+			VisitID       string  `json:"visit_id"`
+			PriceCurrency string  `json:"price_currency"`
+		}
+		responseData := response{
+			PriceAmount:   0,
+			PersonID:      "Bald Eagle",
+			VisitID:       "1",
+			PriceCurrency: "EUR",
+		}
+		json.NewEncoder(w).Encode(responseData)
 	}
 }
