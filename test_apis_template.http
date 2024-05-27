@@ -13,19 +13,15 @@ POST {{server}}/startScenario
 ### CalculatePrice
 POST {{server}}/calculatePrice
 {
-  "date": "2023-07-23",
+  "date": "2023-07-25",
   "dropped_fractions": [
     {
-      "amount_dropped": 83,
+      "amount_dropped": 103,
       "fraction_type": "Green waste"
-    },
-    {
-      "amount_dropped": 18,
-      "fraction_type": "Construction waste"
     }
   ],
   "person_id": "Squirrel Gus",
-  "visit_id": "1"
+  "visit_id": "3"
 }
 
 ### Retrieve users

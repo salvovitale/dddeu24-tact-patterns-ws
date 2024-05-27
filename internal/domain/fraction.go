@@ -59,28 +59,28 @@ func ParseFractionType(s string) (FractionType, error) {
 	}
 }
 
-func (f FractionType) PricePerKg(city City) FractionPricePerKg {
+func (f FractionType) PricePerKg(city City) (FractionPricePerKg, error) {
 	switch f {
 	case GreenWaste:
 		switch city {
 		case Pineville:
-			return GreenWastePinevillePrice
+			return GreenWastePinevillePrice, nil
 		case OakCity:
-			return GreenWasteOakCityPrice
+			return GreenWasteOakCityPrice, nil
 		default:
-			return 0
+			return 0, fmt.Errorf("unknown city: %s", city)
 		}
 	case ConstructionWaste:
 		switch city {
 		case Pineville:
-			return ConstructionPinevilleWastePrice
+			return ConstructionPinevilleWastePrice, nil
 		case OakCity:
-			return ConstructionOakCityWastePrice
+			return ConstructionOakCityWastePrice, nil
 		default:
-			return 0
+			return 0, fmt.Errorf("unknown city: %s", city)
 		}
 	default:
-		return 0
+		return 0, fmt.Errorf("unknown fraction type: %s", f)
 	}
 }
 

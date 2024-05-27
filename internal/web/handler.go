@@ -7,19 +7,25 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/salvovitale/dddeu24-tact-patterns-ws/internal/domain"
+	infra_repository "github.com/salvovitale/dddeu24-tact-patterns-ws/internal/infra/repository"
 	slogchi "github.com/samber/slog-chi"
 )
 
+type extUserService interface {
+	Get(id string) (*infra_repository.UserDto, error)
+}
 type Handler struct {
-	*chi.Mux //embedded structure
-	priceSvc domain.PriceService
+	*chi.Mux       //embedded structure
+	priceSvc       domain.PriceService
+	extUserService extUserService
 }
 
-func NewHandler(logger *slog.Logger, priceSvc domain.PriceService) *Handler {
+func NewHandler(logger *slog.Logger, priceSvc domain.PriceService, extUserService extUserService) *Handler {
 
 	h := &Handler{
-		Mux:      chi.NewRouter(),
-		priceSvc: priceSvc,
+		Mux:            chi.NewRouter(),
+		priceSvc:       priceSvc,
+		extUserService: extUserService,
 	}
 
 	// add logger middleware
@@ -84,7 +90,22 @@ func (h *Handler) calculatePrice() http.HandlerFunc {
 				Kg:   weight,
 			})
 		}
-		price, err := h.priceSvc.CalculatePrice(fractions, req.PersonID)
+
+		user, err := h.extUserService.Get(req.PersonID)
+		if err != nil {
+			slog.Error("error getting user", slog.Any("error", err))
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+
+		visit, err := domain.NewVisit(user.ID, req.Date, fractions, user.City)
+		if err != nil {
+			slog.Error("error creating visit", slog.Any("error", err))
+			http.Error(w, err.Error(), http.StatusBadRequest)
+		}
+
+		slog.Info("visit created", slog.Any("visit", visit))
+
+		price, err := h.priceSvc.CalculatePrice(visit)
 		if err != nil {
 			slog.Error("error calculate price", slog.Any("error", err))
 			http.Error(w, err.Error(), http.StatusBadRequest)

@@ -1,41 +1,62 @@
 package domain
 
-import "fmt"
+import (
+	"fmt"
+	"log/slog"
+)
 
 type PriceSvc struct {
-	userRepo UserRepository
+	visitorRepo VisitorRepository
 }
 
 type PriceService interface {
-	CalculatePrice(fractions []Fraction, id string) (float64, error)
+	CalculatePrice(visit Visit) (float64, error)
 }
 
-func NewPriceSvc(userRepo UserRepository) *PriceSvc {
+func NewPriceSvc(visitorRepo VisitorRepository) *PriceSvc {
 	return &PriceSvc{
-		userRepo: userRepo,
+		visitorRepo: visitorRepo,
 	}
 }
 
-func (p *PriceSvc) CalculatePrice(fractions []Fraction, id string) (float64, error) {
-	users, err := p.userRepo.GetAll()
+func (p *PriceSvc) CalculatePrice(visit Visit) (float64, error) {
+	visitor, err := p.visitorRepo.Get(visit.VisitorID)
 	if err != nil {
-		return 0, fmt.Errorf("error getting users from repository: %w", err)
-	}
-
-	var user *User
-	for _, u := range users {
-		if u.ID == id {
-			user = &u
-			break
+		if err == ErrVisitorNotFound {
+			visitor, err = NewVisitor(visit)
+			if err != nil {
+				return 0, fmt.Errorf("error creating visitor: %w", err)
+			}
+		} else {
+			return 0, fmt.Errorf("error getting visitor: %w", err)
 		}
-	}
-	if user == nil {
-		return 0, fmt.Errorf("user with id %s not found", id)
+	} else {
+		visitor.RegisterVisit(visit.Date)
 	}
 
 	var price float64
-	for _, f := range fractions {
-		price += f.Kg.Float64() * f.Type.PricePerKg(user.City).Float64()
+	for _, f := range visit.Fractions {
+		pricePerCity, err := f.Type.PricePerKg(visit.City)
+		if err != nil {
+			return 0, fmt.Errorf("error getting price per kg: %w", err)
+		}
+		price += f.Kg.Float64() * pricePerCity.Float64()
+	}
+
+	slog.Info("price before surcharge", slog.Any("price", price))
+
+	price *= surChargePolicy(visitor)
+
+	err = p.visitorRepo.Save(visitor)
+	if err != nil {
+		return 0, fmt.Errorf("error saving visitor: %w", err)
 	}
 	return price, nil
+}
+
+func surChargePolicy(visitor Visitor) float64 {
+	if visitor.VisitCounter.Counter >= 3 {
+		return 1.1
+	}
+	return 1.0
 }

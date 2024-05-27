@@ -3,6 +3,7 @@ package infra_repository
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"time"
 
@@ -32,9 +33,14 @@ type UserInRepo struct {
 	CardID  string `json:"card_id"`
 }
 
+type UserDto struct {
+	ID   string
+	City domain.City
+}
+
 type UserRepository struct{}
 
-func (r *UserRepository) GetAll() ([]domain.User, error) {
+func (r *UserRepository) Get(id string) (*UserDto, error) {
 	client := &http.Client{
 		Timeout: time.Duration(5) * time.Second,
 	}
@@ -64,17 +70,23 @@ func (r *UserRepository) GetAll() ([]domain.User, error) {
 		return nil, fmt.Errorf("error decoding response body: %v", err)
 	}
 
-	var domainUsers []domain.User
+	var user *UserDto
 	for _, u := range users {
-		city, err := domain.ParseCity(u.City)
-		if err != nil {
-			return nil, err
+		if u.ID == id {
+			slog.Info("user found", slog.Any("user", u))
+			city, err := domain.ParseCity(u.City)
+			if err != nil {
+				return nil, err
+			}
+			user = &UserDto{
+				ID:   u.ID,
+				City: city,
+			}
+			break
 		}
-		domainUsers = append(domainUsers, domain.User{
-			ID:   u.ID,
-			City: city,
-		})
 	}
-
-	return domainUsers, nil
+	if user == nil {
+		return nil, fmt.Errorf("user not found")
+	}
+	return user, nil
 }
