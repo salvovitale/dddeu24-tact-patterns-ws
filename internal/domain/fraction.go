@@ -5,11 +5,33 @@ import (
 	"strings"
 )
 
+type City string
+
+const (
+	Pineville City = "Pineville"
+	OakCity   City = "Oak City"
+)
+
+func ParseCity(s string) (City, error) {
+	trimmedLower := strings.ToLower(strings.TrimSpace(s))
+	replaced := strings.Replace(trimmedLower, " ", "_", -1)
+	switch replaced {
+	case "pineville":
+		return Pineville, nil
+	case "oak_city":
+		return OakCity, nil
+	default:
+		return "", fmt.Errorf("unknown city: %s", s)
+	}
+}
+
 type FractionPricePerKg float64
 
 const (
-	GreenWastePrice        FractionPricePerKg = 0.1
-	ConstructionWastePrice FractionPricePerKg = 0.15
+	GreenWastePinevillePrice        FractionPricePerKg = 0.1
+	ConstructionPinevilleWastePrice FractionPricePerKg = 0.15
+	GreenWasteOakCityPrice          FractionPricePerKg = 0.08
+	ConstructionOakCityWastePrice   FractionPricePerKg = 0.19
 )
 
 func (f FractionPricePerKg) Float64() float64 {
@@ -37,12 +59,26 @@ func ParseFractionType(s string) (FractionType, error) {
 	}
 }
 
-func (f FractionType) PricePerKg() FractionPricePerKg {
+func (f FractionType) PricePerKg(city City) FractionPricePerKg {
 	switch f {
 	case GreenWaste:
-		return GreenWastePrice
+		switch city {
+		case Pineville:
+			return GreenWastePinevillePrice
+		case OakCity:
+			return GreenWasteOakCityPrice
+		default:
+			return 0
+		}
 	case ConstructionWaste:
-		return ConstructionWastePrice
+		switch city {
+		case Pineville:
+			return ConstructionPinevilleWastePrice
+		case OakCity:
+			return ConstructionOakCityWastePrice
+		default:
+			return 0
+		}
 	default:
 		return 0
 	}
@@ -50,23 +86,19 @@ func (f FractionType) PricePerKg() FractionPricePerKg {
 
 type Fraction struct {
 	Type FractionType
-	Kg   Weight
+	Kg   FractionWeight
+	City City
 }
 
-type Weight float64
+type FractionWeight float64
 
-func (w Weight) Float64() float64 {
+func (w FractionWeight) Float64() float64 {
 	return float64(w)
 }
 
-func ParseWeight(f float64) (Weight, error) {
-	// trimmed := strings.TrimSpace(s)
-	// f, err := strconv.ParseFloat(trimmed, 64)
-	// if err != nil {
-	// 	return 0, fmt.Errorf("failed to parse weight: %w", err)
-	// }
+func ParseWeight(f float64) (FractionWeight, error) {
 	if f < 0 {
 		return 0, fmt.Errorf("weight must be positive")
 	}
-	return Weight(f), nil
+	return FractionWeight(f), nil
 }

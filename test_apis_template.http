@@ -1,6 +1,9 @@
 # @server = https://humble-guacamole-49g746r44qhqww9-5000.app.github.dev
 
 @server = http://localhost:5000
+@users-server =  https://ddd-in-language.aardling.eu
+@users-server-token = emk7srgDuZ
+
 ### Root
 GET {{server}}/
 
@@ -13,16 +16,22 @@ POST {{server}}/calculatePrice
   "date": "2023-07-23",
   "dropped_fractions": [
     {
-      "amount_dropped": 15,
+      "amount_dropped": 83,
       "fraction_type": "Green waste"
     },
     {
-      "amount_dropped": 39,
+      "amount_dropped": 18,
       "fraction_type": "Construction waste"
     }
   ],
-  "person_id": "Bald Eagle",
+  "person_id": "Squirrel Gus",
   "visit_id": "1"
 }
+
+### Retrieve users
+GET {{users-server}}/api/users
+content-type: application/json
+x-auth-token: {{users-server-token}}
+x-workshop-id: ImplementingTacticalPatternsDDDEU24
 
 

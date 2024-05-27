@@ -10,10 +10,16 @@ import (
 	slogchi "github.com/samber/slog-chi"
 )
 
-func NewHandler(logger *slog.Logger) *Handler {
+type Handler struct {
+	*chi.Mux //embedded structure
+	priceSvc domain.PriceService
+}
+
+func NewHandler(logger *slog.Logger, priceSvc domain.PriceService) *Handler {
 
 	h := &Handler{
-		Mux: chi.NewRouter(),
+		Mux:      chi.NewRouter(),
+		priceSvc: priceSvc,
 	}
 
 	// add logger middleware
@@ -29,10 +35,6 @@ func NewHandler(logger *slog.Logger) *Handler {
 	// 	r.Get("/", threadsHandler.listView())
 	// })
 	return h
-}
-
-type Handler struct {
-	*chi.Mux //embedded structure
 }
 
 func (h *Handler) statusOK() http.HandlerFunc {
@@ -53,20 +55,11 @@ func (h *Handler) startScenario() http.HandlerFunc {
 
 func (h *Handler) calculatePrice() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		type DroppedFraction struct {
-			AmountDropped float64 `json:"amount_dropped"`
-			FractionType  string  `json:"fraction_type"`
-		}
-		type Request struct {
-			Date             string            `json:"date"`
-			DroppedFractions []DroppedFraction `json:"dropped_fractions"`
-			PersonID         string            `json:"person_id"`
-			VisitID          string            `json:"visit_id"`
-		}
 
-		var req Request
+		var req CalculatePriceRequest
 		err := json.NewDecoder(r.Body).Decode(&req)
 		if err != nil {
+			slog.Error("error parsing weight", slog.Any("error", err))
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
@@ -76,11 +69,13 @@ func (h *Handler) calculatePrice() http.HandlerFunc {
 		for _, f := range req.DroppedFractions {
 			ft, err := domain.ParseFractionType(f.FractionType)
 			if err != nil {
+				slog.Error("error parsing weight", slog.Any("error", err))
 				http.Error(w, err.Error(), http.StatusBadRequest)
 				return
 			}
 			weight, err := domain.ParseWeight(f.AmountDropped)
 			if err != nil {
+				slog.Error("error parsing weight", slog.Any("error", err))
 				http.Error(w, err.Error(), http.StatusBadRequest)
 				return
 			}
@@ -89,19 +84,15 @@ func (h *Handler) calculatePrice() http.HandlerFunc {
 				Kg:   weight,
 			})
 		}
-
-		p := domain.NewPrice(fractions)
-		price := p.CalculatePrice()
+		price, err := h.priceSvc.CalculatePrice(fractions, req.PersonID)
+		if err != nil {
+			slog.Error("error calculate price", slog.Any("error", err))
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
 
 		w.Header().Set("Content-Type", "application/json")
-
-		type response struct {
-			PriceAmount   float64 `json:"price_amount"`
-			PersonID      string  `json:"person_id"`
-			VisitID       string  `json:"visit_id"`
-			PriceCurrency string  `json:"price_currency"`
-		}
-		responseData := response{
+		responseData := CalculatePriceResponse{
 			PriceAmount:   price,
 			PersonID:      req.PersonID,
 			VisitID:       req.VisitID,
