@@ -56,7 +56,7 @@ func (p *PriceSvc) CalculatePrice(visit Visit) (float64, error) {
 
 func surChargePolicy(visitor Visitor) float64 {
 	if visitor.VisitCounter.Counter >= 3 {
-		return 1.1
+		return 1.05
 	}
 	return 1.0
 }
