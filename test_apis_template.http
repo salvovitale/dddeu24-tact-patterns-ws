@@ -9,6 +9,20 @@ POST {{server}}/startScenario
 
 ### CalculatePrice
 POST {{server}}/calculatePrice
-
+{
+  "date": "2023-07-23",
+  "dropped_fractions": [
+    {
+      "amount_dropped": 15,
+      "fraction_type": "Green waste"
+    },
+    {
+      "amount_dropped": 39,
+      "fraction_type": "Construction waste"
+    }
+  ],
+  "person_id": "Bald Eagle",
+  "visit_id": "1"
+}
 
 
