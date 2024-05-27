@@ -11,6 +11,7 @@ type PriceSvc struct {
 
 type PriceService interface {
 	CalculatePrice(visit Visit) (float64, error)
+	ClearScenario() error
 }
 
 func NewPriceSvc(visitorRepo VisitorRepository) *PriceSvc {
@@ -59,4 +60,8 @@ func surChargePolicy(visitor Visitor) float64 {
 		return 1.05
 	}
 	return 1.0
+}
+
+func (p *PriceSvc) ClearScenario() error {
+	return p.visitorRepo.Clear()
 }

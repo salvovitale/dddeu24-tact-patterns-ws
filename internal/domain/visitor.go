@@ -12,6 +12,7 @@ var (
 type VisitorRepository interface {
 	Get(id string) (Visitor, error)
 	Save(v Visitor) error
+	Clear() error
 }
 
 func NewVisitor(visit Visit) (Visitor, error) {

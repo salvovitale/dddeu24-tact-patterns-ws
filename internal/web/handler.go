@@ -55,6 +55,11 @@ func (h *Handler) startScenario() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		jsonData := map[string]string{}
+		err := h.priceSvc.ClearScenario()
+		if err != nil {
+			slog.Error("error clearing scenario", slog.Any("error", err))
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
 		json.NewEncoder(w).Encode(jsonData)
 	}
 }

@@ -34,3 +34,10 @@ func (r *VisitorInMemoryRepository) Save(v domain.Visitor) error {
 	r.visitors[v.ID] = v
 	return nil
 }
+
+func (r *VisitorInMemoryRepository) Clear() error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.visitors = make(map[string]domain.Visitor)
+	return nil
+}
