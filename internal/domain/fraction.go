@@ -3,6 +3,7 @@ package domain
 import (
 	"fmt"
 	"strings"
+	"time"
 )
 
 type City string
@@ -24,6 +25,8 @@ func ParseCity(s string) (City, error) {
 		return "", fmt.Errorf("unknown city: %s", s)
 	}
 }
+
+type FractionPriceModel func(Visitor) Price
 
 type FractionType string
 
@@ -65,10 +68,10 @@ func ParseWeight(f float64) (FractionWeight, error) {
 }
 
 type FractionPrice struct {
-	FractionType FractionType
-	City         City
-	PricePerKg   Price
-	VisitorType  VisitorType
+	FractionType       FractionType
+	City               City
+	VisitorType        VisitorType
+	FractionPriceModel FractionPriceModel
 }
 
 var (
@@ -76,5 +79,45 @@ var (
 )
 
 type FractionPriceRepository interface {
-	Get(city City, visitorType VisitorType, fractionType FractionType) (*FractionPrice, error)
+	Get(city City, fractionType FractionType, visitorType VisitorType) (*FractionPrice, error)
+}
+
+func ExtractChargeAfterVisit(pricePerKg Price, visitCount uint16) FractionPriceModel {
+	return func(v Visitor) Price {
+		if v.VisitCounter.Counter >= visitCount {
+			return Price{
+				Value:    pricePerKg.Value * 1.05,
+				Currency: EUR,
+			}
+		}
+		return pricePerKg
+	}
+}
+
+func CumulatedWeightOverPeriod(weightThreshold FractionWeight, p1, p2 Price, fractionType FractionType, period time.Duration) FractionPriceModel {
+	return func(v Visitor) Price {
+		totalWeight := v.CumulativeWeightOverPeriod(period, fractionType).Float64()
+		lastVisit := v.LastVisit()
+		lastVisitWeight := lastVisit.WeightOf(fractionType).Float64()
+		totalWeightBeforeLast := totalWeight - lastVisitWeight
+
+		if totalWeight <= weightThreshold.Float64() {
+			return Price{
+				Value:    p1.Value,
+				Currency: EUR,
+			}
+		}
+		if totalWeightBeforeLast > weightThreshold.Float64() {
+			return Price{
+				Value:    p2.Value,
+				Currency: EUR,
+			}
+		}
+		dV1 := weightThreshold.Float64() - totalWeightBeforeLast
+		dV2 := totalWeight - weightThreshold.Float64()
+		return Price{
+			Value:    (p1.Value*dV1 + p2.Value*dV2) / lastVisitWeight,
+			Currency: EUR,
+		}
+	}
 }

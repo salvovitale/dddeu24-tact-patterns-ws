@@ -19,3 +19,13 @@ func NewVisit(date string, fractions []Fraction) (Visit, error) {
 		Date:      t,
 	}, nil
 }
+
+func (v Visit) WeightOf(fractionType FractionType) FractionWeight {
+	var weight FractionWeight
+	for _, f := range v.Fractions {
+		if f.Type == fractionType {
+			weight += f.Kg
+		}
+	}
+	return weight
+}

@@ -16,16 +16,12 @@ POST {{server}}/calculatePrice
   "date": "2023-07-23",
   "dropped_fractions": [
     {
-      "amount_dropped": 83,
-      "fraction_type": "Green waste"
-    },
-    {
-      "amount_dropped": 18,
+      "amount_dropped": 1803,
       "fraction_type": "Construction waste"
     }
   ],
   "person_id": "Beaver Bertha",
-  "visit_id": "1"
+  "visit_id": "2"
 }
 
 ### Retrieve users

@@ -1,20 +1,20 @@
 package infra_repository
 
 import (
-	"fmt"
 	"sync"
+	"time"
 
 	"github.com/salvovitale/dddeu24-tact-patterns-ws/internal/domain"
 )
 
 type repoKey struct {
 	City         domain.City
-	VisitorType  domain.VisitorType
 	FractionType domain.FractionType
+	VisitorType  domain.VisitorType
 }
 
 type FractionPriceInMemoryRepository struct {
-	prices map[repoKey]domain.Price
+	prices map[repoKey]domain.FractionPriceModel
 	mu     sync.RWMutex
 }
 
@@ -25,25 +25,23 @@ func NewFractionPriceInMemoryRepository() *FractionPriceInMemoryRepository {
 	}
 }
 
-func (r *FractionPriceInMemoryRepository) Get(city domain.City, visitorType domain.VisitorType, fractionType domain.FractionType) (*domain.FractionPrice, error) {
+func (r *FractionPriceInMemoryRepository) Get(city domain.City, fractionType domain.FractionType, visitorType domain.VisitorType) (*domain.FractionPrice, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	key := repoKey{
 		City:         city,
-		VisitorType:  visitorType,
 		FractionType: fractionType,
+		VisitorType:  visitorType,
 	}
-
-	fmt.Println("key", key)
 	p, ok := r.prices[key]
 	if !ok {
 		return nil, domain.ErrFractionPriceNotFound
 	}
 	return &domain.FractionPrice{
-		City:         city,
-		VisitorType:  visitorType,
-		FractionType: fractionType,
-		PricePerKg:   p,
+		City:               city,
+		FractionType:       fractionType,
+		VisitorType:        visitorType,
+		FractionPriceModel: p,
 	}, nil
 }
 
@@ -52,22 +50,47 @@ func (r *FractionPriceInMemoryRepository) Save(frPrice *domain.FractionPrice) er
 	defer r.mu.Unlock()
 	key := repoKey{
 		City:         frPrice.City,
-		VisitorType:  frPrice.VisitorType,
 		FractionType: frPrice.FractionType,
+		VisitorType:  frPrice.VisitorType,
 	}
-	r.prices[key] = frPrice.PricePerKg
+	r.prices[key] = frPrice.FractionPriceModel
 	return nil
 }
 
-func initPrices() map[repoKey]domain.Price {
-	return map[repoKey]domain.Price{
-		{City: domain.CityPineville, VisitorType: domain.VisitorTypePrivate, FractionType: domain.FractionTypeGreenWaste}:         domain.Price{Value: 0.1},
-		{City: domain.CityPineville, VisitorType: domain.VisitorTypePrivate, FractionType: domain.FractionTypeConstructionWaste}:  domain.Price{Value: 0.15},
-		{City: domain.CityOakCity, VisitorType: domain.VisitorTypePrivate, FractionType: domain.FractionTypeGreenWaste}:           domain.Price{Value: 0.08},
-		{City: domain.CityOakCity, VisitorType: domain.VisitorTypePrivate, FractionType: domain.FractionTypeConstructionWaste}:    domain.Price{Value: 0.19},
-		{City: domain.CityPineville, VisitorType: domain.VisitorTypeBusiness, FractionType: domain.FractionTypeGreenWaste}:        domain.Price{Value: 0.12},
-		{City: domain.CityPineville, VisitorType: domain.VisitorTypeBusiness, FractionType: domain.FractionTypeConstructionWaste}: domain.Price{Value: 0.13},
-		{City: domain.CityOakCity, VisitorType: domain.VisitorTypeBusiness, FractionType: domain.FractionTypeGreenWaste}:          domain.Price{Value: 0.08},
-		{City: domain.CityOakCity, VisitorType: domain.VisitorTypeBusiness, FractionType: domain.FractionTypeConstructionWaste}:   domain.Price{Value: 0.21},
+/*
+Price lists
+* Pineville:
+	* Private visitor:
+  		* Green waste: 0.10 // extract charge after 3 visits
+  		* Construction waste: 0.15 // extract charge after 3 visits
+	* Business visitor:
+		* Green waste: 0.12
+		* Construction waste: 0.13
+* Oak City:
+	* Private visitor:
+		* Green waste: 0.08 // extract charge after 3 visits
+		* Construction waste: 0.19 // extract charge after 3 visits
+	* Business visitor:
+		* Green waste: 0.08
+		* Construction waste:  <= 1000kg  0.21
+		* Construction waste:  > 1000kg  0.29
+*/
+
+func initPrices() map[repoKey]domain.FractionPriceModel {
+	return map[repoKey]domain.FractionPriceModel{
+		{City: domain.CityPineville, FractionType: domain.FractionTypeGreenWaste, VisitorType: domain.VisitorTypePrivate}:        domain.ExtractChargeAfterVisit(domain.Price{Value: 0.1, Currency: domain.EUR}, 3),
+		{City: domain.CityPineville, FractionType: domain.FractionTypeConstructionWaste, VisitorType: domain.VisitorTypePrivate}: domain.ExtractChargeAfterVisit(domain.Price{Value: 0.15, Currency: domain.EUR}, 3),
+		{City: domain.CityPineville, FractionType: domain.FractionTypeGreenWaste, VisitorType: domain.VisitorTypeBusiness}: func(v domain.Visitor) domain.Price {
+			return domain.Price{Value: 0.12, Currency: domain.EUR}
+		},
+		{City: domain.CityPineville, FractionType: domain.FractionTypeConstructionWaste, VisitorType: domain.VisitorTypeBusiness}: func(v domain.Visitor) domain.Price {
+			return domain.Price{Value: 0.13, Currency: domain.EUR}
+		},
+		{City: domain.CityOakCity, FractionType: domain.FractionTypeGreenWaste, VisitorType: domain.VisitorTypePrivate}:        domain.ExtractChargeAfterVisit(domain.Price{Value: 0.08, Currency: domain.EUR}, 3),
+		{City: domain.CityOakCity, FractionType: domain.FractionTypeConstructionWaste, VisitorType: domain.VisitorTypePrivate}: domain.ExtractChargeAfterVisit(domain.Price{Value: 0.19, Currency: domain.EUR}, 3),
+		{City: domain.CityOakCity, FractionType: domain.FractionTypeGreenWaste, VisitorType: domain.VisitorTypeBusiness}: func(v domain.Visitor) domain.Price {
+			return domain.Price{Value: 0.08, Currency: domain.EUR}
+		},
+		{City: domain.CityOakCity, FractionType: domain.FractionTypeConstructionWaste, VisitorType: domain.VisitorTypeBusiness}: domain.CumulatedWeightOverPeriod(domain.FractionWeight(1000), domain.Price{Value: 0.21, Currency: domain.EUR}, domain.Price{Value: 0.29, Currency: domain.EUR}, domain.FractionTypeConstructionWaste, time.Duration(24*time.Hour*356)),
 	}
 }

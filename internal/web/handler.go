@@ -100,10 +100,10 @@ func (h *Handler) calculatePrice() http.HandlerFunc {
 
 		w.Header().Set("Content-Type", "application/json")
 		responseData := CalculatePriceResponse{
-			PriceAmount:   price,
+			PriceAmount:   price.Value,
 			PersonID:      req.PersonID,
 			VisitID:       req.VisitID,
-			PriceCurrency: "EUR",
+			PriceCurrency: string(price.Currency),
 		}
 		json.NewEncoder(w).Encode(responseData)
 	}

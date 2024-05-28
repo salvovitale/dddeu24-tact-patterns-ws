@@ -38,6 +38,7 @@ type Visitor struct {
 	City         City
 	VisitCounter VisitCounter
 	Type         VisitorType
+	Visits       []Visit
 }
 
 func NewVisitor(id string, city City, visitorType VisitorType) (Visitor, error) {
@@ -46,11 +47,28 @@ func NewVisitor(id string, city City, visitorType VisitorType) (Visitor, error) 
 		City:         city,
 		VisitCounter: VisitCounter{},
 		Type:         visitorType,
+		Visits:       make([]Visit, 0),
 	}, nil
 }
 
-func (v *Visitor) RegisterVisit(date time.Time) {
-	v.VisitCounter = v.VisitCounter.AddVisit(date)
+func (v *Visitor) RegisterVisit(visit Visit) {
+	v.Visits = append(v.Visits, visit)
+	v.VisitCounter = v.VisitCounter.AddVisit(visit.Date)
+}
+
+func (v *Visitor) LastVisit() Visit {
+	return v.Visits[len(v.Visits)-1]
+}
+
+func (v *Visitor) CumulativeWeightOverPeriod(period time.Duration, fracType FractionType) FractionWeight {
+	lastVisit := v.Visits[len(v.Visits)-1]
+	cumWeight := 0.0
+	for _, visit := range v.Visits {
+		if visit.Date.Add(period).After(lastVisit.Date) {
+			cumWeight += visit.WeightOf(fracType).Float64()
+		}
+	}
+	return FractionWeight(cumWeight)
 }
 
 type VisitCounter struct {

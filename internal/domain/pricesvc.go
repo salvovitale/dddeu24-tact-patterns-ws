@@ -10,7 +10,7 @@ type PriceSvc struct {
 }
 
 type PriceService interface {
-	CalculatePrice(visit Visit, visitor Visitor) (float64, error)
+	CalculatePrice(visitor Visitor) (Price, error)
 }
 
 func NewPriceSvc(fracPriceRepo FractionPriceRepository) *PriceSvc {
@@ -19,25 +19,19 @@ func NewPriceSvc(fracPriceRepo FractionPriceRepository) *PriceSvc {
 	}
 }
 
-func (p *PriceSvc) CalculatePrice(visit Visit, visitor Visitor) (float64, error) {
+func (p *PriceSvc) CalculatePrice(visitor Visitor) (Price, error) {
 	var price float64
+	visit := visitor.Visits[len(visitor.Visits)-1]
 	for _, f := range visit.Fractions {
-		fracPrice, err := p.fracPriceRepo.Get(visitor.City, visitor.Type, f.Type)
+		fracPrice, err := p.fracPriceRepo.Get(visitor.City, f.Type, visitor.Type)
 		if err != nil {
-			return 0, fmt.Errorf("error getting price per kg: %w", err)
+			return Price{}, fmt.Errorf("error getting price per kg: %w", err)
 		}
-		price += f.Kg.Float64() * fracPrice.PricePerKg.Value
+		price += f.Kg.Float64() * fracPrice.FractionPriceModel(visitor).Value
 	}
-
 	slog.Info("price before surcharge", slog.Any("price", price))
-
-	price *= surChargePolicy(visitor)
-	return price, nil
-}
-
-func surChargePolicy(visitor Visitor) float64 {
-	if visitor.VisitCounter.Counter >= 3 {
-		return 1.05
-	}
-	return 1.0
+	return Price{
+		Value:    price,
+		Currency: EUR,
+	}, nil
 }
